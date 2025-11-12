@@ -188,8 +188,11 @@ for s in range(Zout.shape[0]-1):
 fig, ax = plt.subplots(figsize=(15,15))
 fig2, ax2 = plt.subplots(figsize=(15,15))
 
-contour = ax.contour(Zout[0])
-tend = ax2.contour(np.subtract(Zout[0],Zout[0]))
+contour = ax.contourf(Zout[0])
+tend = ax2.contourf(np.subtract(Zout[0],Zout[0]))
+
+cb = fig.colorbar(contour, ax = ax)
+cb2 = fig2.colorbar(tend, ax = ax2)
 
 #fig.savefig('img/Zout_0.png',bbox_inches='tight', dpi=300)
 plt.ion()  # modalità interattiva
@@ -203,14 +206,14 @@ for tt in range(Zout.shape[0]):
   tend.remove()
 
   # Disegna il nuovo contour
-  contour = ax.contour(Zout[tt])
-  tend = ax2.contour(np.subtract(Zout[tt],Zout[0]))
-  ax.colorbar()
-  ax2.colorbar()
+  contour = ax.contourf(Zout[tt])
+  tend = ax2.contourf(np.subtract(Zout[tt],Zout[0]))
+  cb.update_normal(contour)
+  cb2.update_normal(tend)
   # Aggiorna il grafico
   plt.draw()
   #fig.savefig('img/Zout_'+str(tt)+'.png',bbox_inches='tight', dpi=300)
-  plt.pause(0.1)  # attende 1 secondo
+  plt.pause(0.5)  # attende 1 secondo
 
 ax.contour(Z24, colors="red")
 plt.ioff()
