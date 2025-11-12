@@ -138,8 +138,8 @@ def make_f_and_h(N,M,Xp,Yp):
 ###################################################
 ##############FIXED PARAMETERS###########################
 ###################################################   
-M  = 19 # Points in x direction
-N  = 16 # Points in y direction
+M  = 16 # Points in y direction
+N  = 19 # Points in x direction
 Xp = 8 # Coord. of North Pole
 Yp = 12 # Coord. of North Pole
 
@@ -171,6 +171,8 @@ File1 = 'case1_0503' #The initial value
 File2 = 'case1_0603' #The final value 
 Z0  = np.genfromtxt(File1)
 Z24 = np.genfromtxt(File2)
+Z24 = np.transpose(Z24)
+Z0 = np.transpose(Z0)
 
 Zout[0,:,:]  = Z0      #  Copy initial height field
 #Zout[0,:,:] = np.rot90(Z0, k=3, axes=(0,1))
@@ -184,11 +186,32 @@ for s in range(Zout.shape[0]-1):
   
 
 fig, ax = plt.subplots(figsize=(15,15))
-#np.transpose(Zout[:])
-#plt.contour(Z0, colors="green")
-ax.contour(np.rot90(Zout[0], k=3))
-#fig.gca().invert_xaxis()
-#ax.contour(Zout[0])
-#plt.contour(Zout[nt], colors="red")
-plt.tight_layout()
+fig2, ax2 = plt.subplots(figsize=(15,15))
+
+contour = ax.contour(Zout[0])
+tend = ax2.contour(np.subtract(Zout[0],Zout[0]))
+
+#fig.savefig('img/Zout_0.png',bbox_inches='tight', dpi=300)
+plt.ion()  # modalità interattiva
+plt.show()
+
+# Loop di aggiornamento
+for tt in range(Zout.shape[0]):
+  # Aggiorna i dati
+  # Rimuovi il contour precedente
+  contour.remove()
+  tend.remove()
+
+  # Disegna il nuovo contour
+  contour = ax.contour(Zout[tt])
+  tend = ax2.contour(np.subtract(Zout[tt],Zout[0]))
+  ax.colorbar()
+  ax2.colorbar()
+  # Aggiorna il grafico
+  plt.draw()
+  #fig.savefig('img/Zout_'+str(tt)+'.png',bbox_inches='tight', dpi=300)
+  plt.pause(0.1)  # attende 1 secondo
+
+ax.contour(Z24, colors="red")
+plt.ioff()
 plt.show()
