@@ -15,7 +15,13 @@ DtHours = .5   #  Timestep in hours.
 ################################################### 
 import numpy as np
 import matplotlib.pyplot as plt
-
+plt.rcParams['font.size'] = 20              # dimensione testo di default (titoli, etichette, legende)
+plt.rcParams['axes.titlesize'] = 20         # dimensione del titolo degli assi
+plt.rcParams['axes.labelsize'] = 20         # dimensione delle etichette degli assi
+plt.rcParams['xtick.labelsize'] = 20        # dimensione dei tick sull’asse x
+plt.rcParams['ytick.labelsize'] = 20        # dimensione dei tick sull’asse y
+plt.rcParams['legend.fontsize'] = 20        # dimensione del testo nella legenda
+plt.rcParams['figure.titlesize'] = 20       # dimensione del titolo della figura (fig.suptitle)
 ###################################################
 ##############DEFINE FUNCTIONS#####################
 ###################################################     
@@ -167,6 +173,7 @@ Z0  = np.genfromtxt(File1)
 Z24 = np.genfromtxt(File2)
 
 Zout[0,:,:]  = Z0      #  Copy initial height field
+#Zout[0,:,:] = np.rot90(Z0, k=3, axes=(0,1))
 L[0] = make_Laplacian(Zout[0])
 
 for s in range(Zout.shape[0]-1):
@@ -174,8 +181,14 @@ for s in range(Zout.shape[0]-1):
   Zdot = Poisson_solver(Ldot)
   L[s+1] = Ldot*Dt + L[s]
   Zout[s+1] = Zdot*Dt + Zout[s]
+  
 
+fig, ax = plt.subplots(figsize=(15,15))
+#np.transpose(Zout[:])
 #plt.contour(Z0, colors="green")
-plt.contour(Z24, colors="blue")
-plt.contour(Zout[nt], colors="red")
+ax.contour(np.rot90(Zout[0], k=3))
+#fig.gca().invert_xaxis()
+#ax.contour(Zout[0])
+#plt.contour(Zout[nt], colors="red")
+plt.tight_layout()
 plt.show()
