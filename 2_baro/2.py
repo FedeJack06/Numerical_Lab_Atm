@@ -15,13 +15,6 @@ DtHours = .5   #  Timestep in hours.
 ################################################### 
 import numpy as np
 import matplotlib.pyplot as plt
-plt.rcParams['font.size'] = 20              # dimensione testo di default (titoli, etichette, legende)
-plt.rcParams['axes.titlesize'] = 20         # dimensione del titolo degli assi
-plt.rcParams['axes.labelsize'] = 20         # dimensione delle etichette degli assi
-plt.rcParams['xtick.labelsize'] = 20        # dimensione dei tick sull’asse x
-plt.rcParams['ytick.labelsize'] = 20        # dimensione dei tick sull’asse y
-plt.rcParams['legend.fontsize'] = 20        # dimensione del testo nella legenda
-plt.rcParams['figure.titlesize'] = 20       # dimensione del titolo della figura (fig.suptitle)
 ###################################################
 ##############DEFINE FUNCTIONS#####################
 ###################################################     
