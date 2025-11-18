@@ -20,7 +20,7 @@ import matplotlib.pyplot as plt
 ###################################################     
 
 
-def make_Laplacian(Z):
+def make_Laplacian(Z, const):
     #  Compute the Laplacian 
     #of the geopotential height
     # within the boundary
@@ -38,14 +38,13 @@ def make_Laplacian(Z):
     ##  Laplacian of height (or vorticity)
     L0in[1:M-1,1:N-1] = Zxx[1:M-1,1:N-1]+Zyy[1:M-1,1:N-1]
 
-    for i in range(1,M-1):
-      L0in[i,0] = 2*L0in[i,1]-L0in[i,2]
-      L0in[i,N-1] = 2*L0in[i,N-2]-L0in[i,N-3]
-    for j in range(N):
-      L0in[0,j] = 2*L0in[1,j]-L0in[2,j]
-      L0in[M-1,j] = 2*L0in[M-2,j]-L0in[M-3,j]
-
-
+    if not const:
+      for i in range(1,M-1):
+        L0in[i,0] = 2*L0in[i,1]-L0in[i,2]
+        L0in[i,N-1] = 2*L0in[i,N-2]-L0in[i,N-3]
+      for j in range(N):
+        L0in[0,j] = 2*L0in[1,j]-L0in[2,j]
+        L0in[M-1,j] = 2*L0in[M-2,j]-L0in[M-3,j]
     
     return L0in
 
@@ -70,7 +69,7 @@ def make_Jacobian(Z,ABS_VOR):
     Jacobi = ABS_VORx * Zy - ABS_VORy * Zx
     return Jacobi
 
-def Poisson_solver(Jacobi):
+def Poisson_solver(Jacobi, const):
     M       = Jacobi.shape[0]
     N       = Jacobi.shape[1]
     SM=np.zeros([M-2,M-2])
@@ -99,12 +98,13 @@ def Poisson_solver(Jacobi):
     #  Compute inverse transform to get the height tendency.
     Zdot[1:M-1,1:N-1] = (4/((M-1)*(N-1))) *np.dot(SM,np.dot(ZDOT,SN))
 
-    for i in range(1,M-1):
-      Zdot[i,0] = 2*Zdot[i,1]-Zdot[i,2]
-      Zdot[i,N-1] = 2*Zdot[i,N-2]-Zdot[i,N-3]
-    for j in range(N):
-      Zdot[0,j] = 2*Zdot[1,j]-Zdot[2,j]
-      Zdot[M-1,j] = 2*Zdot[M-2,j]-Zdot[M-3,j]
+    if not const:
+      for i in range(1,M-1):
+        Zdot[i,0] = 2*Zdot[i,1]-Zdot[i,2]
+        Zdot[i,N-1] = 2*Zdot[i,N-2]-Zdot[i,N-3]
+      for j in range(N):
+        Zdot[0,j] = 2*Zdot[1,j]-Zdot[2,j]
+        Zdot[M-1,j] = 2*Zdot[M-2,j]-Zdot[M-3,j]
     return Zdot
       
  
@@ -153,7 +153,7 @@ FCOR,h=make_f_and_h(N,M,Xp,Yp)
 ###################################################
 ###############DEFINE WORKING ARRAYS###############
 ###################################################
-Zout=np.zeros([nt+1,M,N])   
+Zout=np.zeros([nt+1,M,N])
 L=np.zeros([nt+1,M,N])
 ###################################################
 ###############READ INPUT DATA##########################
@@ -168,46 +168,86 @@ Z24 = np.transpose(Z24)
 Z0 = np.transpose(Z0)
 
 Zout[0,:,:]  = Z0      #  Copy initial height field
-#Zout[0,:,:] = np.rot90(Z0, k=3, axes=(0,1))
-L[0] = make_Laplacian(Zout[0])
+L[0] = make_Laplacian(Zout[0], 0)
 
+nome = "ilbello"
 for s in range(Zout.shape[0]-1):
-  Ldot = make_Jacobian(Zout[s],np.multiply(h,L[s])+FCOR)
-  Zdot = Poisson_solver(Ldot)
-  L[s+1] = Ldot*Dt + L[s]
-  Zout[s+1] = Zdot*Dt + Zout[s]
-  
+  if s == 0:
+    Ldot = make_Jacobian(Zout[s],np.multiply(h,L[s])+FCOR)
+    Zdot = Poisson_solver(Ldot, s)
+    L[s+1] = Ldot*Dt + L[s]
+    Zout[s+1] = Zdot*Dt + Zout[s]
+  else:
+    Ldot = make_Jacobian(Zout[s],np.multiply(h,L[s])+FCOR)
+    Zdot = Poisson_solver(Ldot, s)
+    L[s+1] = Ldot*Dt*2 + L[s-1]
+    Zout[s+1] = Zdot*Dt*2 + Zout[s-1]
 
-fig, ax = plt.subplots(figsize=(15,15))
-fig2, ax2 = plt.subplots(figsize=(15,15))
+'''nome = "barbarossa"
+for s in range(Zout.shape[0]-1):
+  if s == 0:
+    Ldot = make_Jacobian(Zout[s],np.multiply(h,L[s])+FCOR)
+    Zdot = Poisson_solver(Ldot, s)
+    Zout[s+1] = Zdot*Dt + Zout[s]
+    L[s+1] = make_Laplacian(Zout[s+1], s)
+  else:
+    Ldot = make_Jacobian(Zout[s],np.multiply(h,L[s])+FCOR)
+    Zdot = Poisson_solver(Ldot, s)
+    Zout[s+1] = Zdot*Dt*2 + Zout[s-1]
+    L[s+1] = make_Laplacian(Zout[s+1], s)'''
 
-contour = ax.contourf(Zout[0])
-tend = ax2.contourf(np.subtract(Zout[0],Zout[0]))
+'''nome = "ficcanaso" #NO integrazione + derivata Sparisce il continuo
+for s in range(Zout.shape[0]-1):
+  if s == 0:
+    Ldot = make_Jacobian(Zout[s],np.multiply(h,L[s])+FCOR)
+    L[s+1] = Ldot*Dt + L[s]
+    Zout[s+1] = Poisson_solver(L[s+1], s)
+  else:
+    Ldot = make_Jacobian(Zout[s],np.multiply(h,L[s])+FCOR)
+    L[s+1] = Ldot*Dt*2 + L[s-1]
+    Zout[s+1] = Poisson_solver(L[s+1], s)'''
 
+maxZ = np.max(Zout)
+minZ = np.min(Zout)
+
+############################################ ANOMALY
+anomaly=np.zeros([nt+1,M,N])
+anomaly[:] = np.subtract(Zout[:],Zout[0])
+maxD = np.max(anomaly)
+minD = np.min(anomaly)
+
+############################################ PLOTS
+fig, ax = plt.subplots()
+contour = ax.contourf(Zout[0], levels=np.linspace(minZ,maxZ,15))
 cb = fig.colorbar(contour, ax = ax)
+
+fig2, ax2 = plt.subplots()
+tend = ax2.contourf(np.subtract(Zout[0],Zout[0]), levels=np.linspace(minD,maxD,15))
 cb2 = fig2.colorbar(tend, ax = ax2)
 
-#fig.savefig('img/Zout_0.png',bbox_inches='tight', dpi=300)
 plt.ion()  # modalità interattiva
 plt.show()
 
 # Loop di aggiornamento
 for tt in range(Zout.shape[0]):
-  # Aggiorna i dati
-  # Rimuovi il contour precedente
   contour.remove()
   tend.remove()
 
   # Disegna il nuovo contour
-  contour = ax.contourf(Zout[tt])
-  tend = ax2.contourf(np.subtract(Zout[tt],Zout[0]))
+  contour = ax.contourf(Zout[tt], levels=np.linspace(minZ,maxZ,15))
   cb.update_normal(contour)
+
+  tend = ax2.contourf(np.subtract(Zout[tt],Zout[0]), levels=np.linspace(minD,maxD,15))
   cb2.update_normal(tend)
   # Aggiorna il grafico
   plt.draw()
-  #fig.savefig('img/Zout_'+str(tt)+'.png',bbox_inches='tight', dpi=300)
-  plt.pause(0.5)  # attende 1 secondo
+
+  fig.savefig(nome + '/Zout_'+str(tt)+'.png',bbox_inches='tight', dpi=300)
+  fig2.savefig(nome + '/tend_'+str(tt)+'.png',bbox_inches='tight', dpi=300)
+  print(tt)
+  plt.pause(0.1)  # attende 1 secondo
 
 ax.contour(Z24, colors="red")
+fig.savefig(nome + '/Z24_'+str(tt)+'.png',bbox_inches='tight', dpi=300)
 plt.ioff()
 plt.show()
