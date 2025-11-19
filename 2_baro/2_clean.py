@@ -229,6 +229,9 @@ def salva_frame(fig, name, folder, tt):
 def rmse(Z1, Z2):
   return np.sqrt(np.mean((Z1 - Z2)**2))
 
+def mean_error(Z1, Z2):
+  return np.mean(Z1 - Z2)
+
 #Run the model
 Zout, L = run_model_ilbello(Z0, L0, Dt, nt)
 
@@ -283,3 +286,10 @@ print("RMSE (Zout[-1] vs Z0):", rmse_analysis)
 
 rmse_24 = rmse(Z24, Z0)
 print("RMSE (Z24 vs Z0):", rmse_24)
+
+#Mean Error
+mean_error_analysis = mean_error(Zout[-1], Z0)
+print("Mean Error (Zout[-1] vs Z0):", mean_error_analysis) 
+
+mean_error_24 = mean_error(Z24, Z0)
+print("Mean Error (Z24 vs Z0):", mean_error_24)
