@@ -213,14 +213,21 @@ def plot_geopotenziale(ax, Z, levels, cmap, cb=None):
   img = ax.contourf(Z, levels=levels, cmap=cmap)
   if cb is not None:
     cb.update_normal(img)
-  ax.plot(Xp, Yp, marker='*', markersize=15, color='purple')
+    cb.set_label('[m]')
+  ax.plot(Xp, Yp, marker='*', markersize=15, color='orange')
+  ax.set_xlabel('X')
+  ax.set_ylabel('Y')
+  ax.set_title('Geopotential Height')
   return img
 
 def plot_tendency(ax, Z_now, Z_ref, levels, cb=None):
   img = ax.contourf(Z_now - Z_ref, levels=levels)
   if cb is not None:
     cb.update_normal(img)
-  ax.plot(Xp, Yp, marker='*', markersize=15, color='purple')
+  ax.plot(Xp, Yp, marker='*', markersize=15, color='orange')
+  ax.set_xlabel('X')
+  ax.set_ylabel('Y')
+  ax.set_title('Tendency of Geopotential Height Anomaly')
   return img
 
 def salva_frame(fig, name, folder, tt):
@@ -274,8 +281,7 @@ for tt in range(Zout.shape[0]):
   salva_frame(fig2, "tend", folder, tt)
 
 # Add final verification contours
-ax.contour(Z24, colors="red")
-ax.plot(Xp, Yp, marker='*', markersize=15, color='purple')
+ax.contour(Z24, colors="k")
 salva_frame(fig, name="Zout_48", folder=folder, tt="final")
 
 print("done")
