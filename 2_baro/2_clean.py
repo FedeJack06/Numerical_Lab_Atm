@@ -14,9 +14,9 @@ DtHours = .5 # Timestep in hours
 DX = 736e3   # Spatial grid spacing in meters
 
 #Output directory
-nome = "output_frames"
-if not os.path.exists(nome):
-    os.makedirs(nome)
+folder = "output_frames"
+if not os.path.exists(folder):
+    os.makedirs(folder)
 
 #Define functions
 def make_Laplacian(Z, const):
@@ -161,14 +161,13 @@ def run_model_ilbello(Z0, L0, Dt, nt):
   L[0] = L0
 
   for s in range(Zout.shape[0]-1):
+    Ldot = make_Jacobian(Zout[s],np.multiply(h,L[s])+FCOR)
+    Zdot = Poisson_solver(Ldot, s)
+
     if s == 0:
-      Ldot = make_Jacobian(Zout[s],np.multiply(h,L[s])+FCOR)
-      Zdot = Poisson_solver(Ldot, s)
       L[s+1] = Ldot*Dt + L[s]
       Zout[s+1] = Zdot*Dt + Zout[s]
     else:
-      Ldot = make_Jacobian(Zout[s],np.multiply(h,L[s])+FCOR)
-      Zdot = Poisson_solver(Ldot, s)
       L[s+1] = Ldot*Dt*2 + L[s-1]
       Zout[s+1] = Zdot*Dt*2 + Zout[s-1]
 
@@ -181,14 +180,12 @@ def run_model_barbarossa(Z0, L0, Dt, nt):
   L[0] = L0
 
   for s in range(Zout.shape[0]-1):
+    Ldot = make_Jacobian(Zout[s],np.multiply(h,L[s])+FCOR)
+    Zdot = Poisson_solver(Ldot, s)
     if s == 0:
-      Ldot = make_Jacobian(Zout[s],np.multiply(h,L[s])+FCOR)
-      Zdot = Poisson_solver(Ldot, s)
       Zout[s+1] = Zdot*Dt + Zout[s]
       L[s+1] = make_Laplacian(Zout[s+1], s)
     else:
-      Ldot = make_Jacobian(Zout[s],np.multiply(h,L[s])+FCOR)
-      Zdot = Poisson_solver(Ldot, s)
       Zout[s+1] = Zdot*Dt*2 + Zout[s-1]
       L[s+1] = make_Laplacian(Zout[s+1], s)
 
@@ -224,8 +221,11 @@ def plot_tendency(ax, Z_now, Z_ref, levels, cb=None):
         cb.update_normal(img)
     return img
 
-def salva_frame(fig, name, tt, cartella):
-    fig.savefig(f"{cartella}/{name}_{tt}.png", bbox_inches='tight', dpi=300)
+def salva_frame(fig, name, folder, tt=None):
+    if tt:
+      fig.savefig(f"{folder}/{name}_{tt}.png", bbox_inches='tight', dpi=300)
+    else:
+      fig.savefig(f"{folder}/{name}.png", bbox_inches='tight', dpi=300)
 
 #Run the model
 Zout, L = run_model_ilbello(Z0, L0, Dt, nt)
@@ -265,15 +265,15 @@ for tt in range(Zout.shape[0]):
   plt.draw()
 
   # Save frames
-  salva_frame(fig, "Zout", tt, nome)
-  salva_frame(fig2, "tend", tt, nome)
+  salva_frame(fig, "Zout", folder, tt)
+  salva_frame(fig2, "tend", folder, tt)
   
   #print(tt)
   #plt.pause(0.01) # attende 0.01 secondo>
 
 # Add final verification contours
 ax.contour(Z24, colors="red")
-salva_frame(fig, "Zout_48_c", tt, nome)
+salva_frame(fig, name="Zout_48_c", cartella=folder)
 
 #plt.ioff()
 #plt.show()
