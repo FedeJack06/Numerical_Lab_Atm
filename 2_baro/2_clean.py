@@ -210,22 +210,21 @@ def run_model_ficcanaso(Z0, L0, Dt, nt): #NO integrazione + derivata Sparisce il
 
 #plots functions
 def plot_geopotenziale(ax, Z, levels, cmap, cb=None):
-    img = ax.contourf(Z, levels=levels, cmap=cmap)
-    if cb is not None:
-        cb.update_normal(img)
-    return img
+  img = ax.contourf(Z, levels=levels, cmap=cmap)
+  if cb is not None:
+    cb.update_normal(img)
+  ax.plot(Xp, Yp, marker='*', markersize=15, color='purple')
+  return img
 
 def plot_tendency(ax, Z_now, Z_ref, levels, cb=None):
-    img = ax.contourf(Z_now - Z_ref, levels=levels)
-    if cb is not None:
-        cb.update_normal(img)
-    return img
+  img = ax.contourf(Z_now - Z_ref, levels=levels)
+  if cb is not None:
+    cb.update_normal(img)
+  ax.plot(Xp, Yp, marker='*', markersize=15, color='purple')
+  return img
 
-def salva_frame(fig, name, folder, tt=None):
-    if tt:
-      fig.savefig(f"{folder}/{name}_{tt}.png", bbox_inches='tight', dpi=300)
-    else:
-      fig.savefig(f"{folder}/{name}.png", bbox_inches='tight', dpi=300)
+def salva_frame(fig, name, folder, tt):
+  fig.savefig(f"{folder}/{name}_{tt}.png", bbox_inches='tight', dpi=300)
 
 def rmse(Z1, Z2):
   return np.sqrt(np.mean((Z1 - Z2)**2))
@@ -252,9 +251,9 @@ levelsD = np.linspace(minD, maxD, 15)
 tend = ax2.contourf(np.subtract(Zout[0], Zout[0]), levels=levelsD)
 cb2 = fig2.colorbar(tend, ax=ax2)
 
-#plt.ion()  # modalità interattiva
-#plt.show()
-"""
+contour = plot_geopotenziale(ax, Zout[0], levelsZ, cmap='viridis', cb=cb)
+tend = plot_tendency(ax2, Zout[0], Zout[0], levelsD, cb=cb2)
+
 # Loop di aggiornamento
 for tt in range(Zout.shape[0]):
   contour.remove()
@@ -270,17 +269,11 @@ for tt in range(Zout.shape[0]):
   # Save frames
   salva_frame(fig, "Zout", folder, tt)
   salva_frame(fig2, "tend", folder, tt)
-  
-  #print(tt)
-  #plt.pause(0.01) # attende 0.01 secondo>
 
 # Add final verification contours
 ax.contour(Z24, colors="red")
-salva_frame(fig, name="Zout_48_c", folder=folder)
-"""
-
-#plt.ioff()
-#plt.show()
+ax.plot(Xp, Yp, marker='*', markersize=15, color='purple')
+salva_frame(fig, name="Zout_48", folder=folder, tt="final")
 
 print("done")
 
