@@ -147,9 +147,9 @@ FCOR,h=make_f_and_h(N,M,Xp,Yp)
 File1 = 'case1_0503' #The initial value 
 File2 = 'case1_0603' #The final value 
 Z0  = np.genfromtxt(File1)
+Z0 = np.transpose(Z0)
 Z24 = np.genfromtxt(File2)
 Z24 = np.transpose(Z24)
-Z0 = np.transpose(Z0)
 
 #Initial Laplacian
 L0 = make_Laplacian(Z0, 0)
@@ -227,6 +227,12 @@ def salva_frame(fig, name, folder, tt=None):
     else:
       fig.savefig(f"{folder}/{name}.png", bbox_inches='tight', dpi=300)
 
+def rmse(Z1, Z2):
+  Z1 = np.asarray(Z1)
+  Z2 = np.asarray(Z2)
+
+  return np.sqrt(np.mean((Z1 - Z2)**2))
+
 #Run the model
 Zout, L = run_model_ilbello(Z0, L0, Dt, nt)
 
@@ -251,7 +257,7 @@ cb2 = fig2.colorbar(tend, ax=ax2)
 
 #plt.ion()  # modalità interattiva
 #plt.show()
-
+"""
 # Loop di aggiornamento
 for tt in range(Zout.shape[0]):
   contour.remove()
@@ -273,9 +279,17 @@ for tt in range(Zout.shape[0]):
 
 # Add final verification contours
 ax.contour(Z24, colors="red")
-salva_frame(fig, name="Zout_48_c", cartella=folder)
+salva_frame(fig, name="Zout_48_c", folder=folder)
+"""
 
 #plt.ioff()
 #plt.show()
 
 print("done")
+
+#RMSE
+rmse_analysis = rmse(Zout[-1], Z0)
+print("RMSE (Zout[-1] vs Z0):", rmse_analysis)
+
+rmse_24 = rmse(Z24, Z0)
+print("RMSE (Z24 vs Z0):", rmse_24)
