@@ -228,9 +228,6 @@ def salva_frame(fig, name, folder, tt=None):
       fig.savefig(f"{folder}/{name}.png", bbox_inches='tight', dpi=300)
 
 def rmse(Z1, Z2):
-  Z1 = np.asarray(Z1)
-  Z2 = np.asarray(Z2)
-
   return np.sqrt(np.mean((Z1 - Z2)**2))
 
 #Run the model
