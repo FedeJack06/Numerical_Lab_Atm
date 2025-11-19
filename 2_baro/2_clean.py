@@ -10,7 +10,7 @@ import os
 
 #Parameters
 DAYLEN  = 1  # Forecast length in days
-DtHours = .5 # Timestep in hours
+DtHours = 1/2 # Timestep in hours
 DX = 736e3   # Spatial grid spacing in meters
 
 #Output directory
@@ -154,23 +154,41 @@ Z24 = np.transpose(Z24)
 #Initial Laplacian
 L0 = make_Laplacian(Z0, 0)
 
-def run_model_ilbello(Z0, L0, Dt, nt):
+def run_model_ilbello(Z0, L0, Dt, nt, method="leapfrog"):
   Zout = np.zeros([nt+1,M,N])
-  L = np.zeros([nt+1,M,N])
-  Zout[0,:,:]  = Z0 #Copy initial height field
+  Zdot = np.zeros([nt+1,M,N])
+  L    = np.zeros([nt+1,M,N])
+  Ldot = np.zeros([nt+1,M,N])
+
+  #Copy initial height field
+  Zout[0,:,:]  = Z0
   L[0] = L0
 
   for s in range(Zout.shape[0]-1):
-    Ldot = make_Jacobian(Zout[s],np.multiply(h,L[s])+FCOR)
-    Zdot = Poisson_solver(Ldot, s)
+    Ldot[s] = make_Jacobian(Zout[s],np.multiply(h,L[s])+FCOR)
+    Zdot[s] = Poisson_solver(Ldot[s], s)
 
-    if s == 0:
-      L[s+1] = Ldot*Dt + L[s]
-      Zout[s+1] = Zdot*Dt + Zout[s]
-    else:
-      L[s+1] = Ldot*Dt*2 + L[s-1]
-      Zout[s+1] = Zdot*Dt*2 + Zout[s-1]
+    if method == "leapfrog":
+      if s == 0:
+        L[s+1] = Ldot[s]*Dt + L[s]
+        Zout[s+1] = Zdot[s]*Dt + Zout[s]
+      else:
+        L[s+1] = Ldot[s]*Dt*2 + L[s-1]
+        Zout[s+1] = Zdot[s]*Dt*2 + Zout[s-1]
 
+    elif method == "AB4":
+      if s == 0:
+        L[s+1] = Ldot[s]*Dt + L[s]
+        Zout[s+1] = Zdot[s]*Dt + Zout[s]
+      elif s==1:
+        L[s+1] = L[s] + Dt*(3/2*Ldot[s] -0.5*Ldot[s-1])
+        Zout[s+1] = Zout[s] + Dt*(3/2*Zdot[s] -0.5*Zdot[s-1])
+      elif s==2:
+        L[s+1] = L[s] + Dt*(23/12*Ldot[s] -4/3*Ldot[s-1] +5/12*Ldot[s-2])
+        Zout[s+1] = Zout[s] + Dt*(23/12*Zdot[s] -4/3*Zdot[s-1] +5/12*Zdot[s-2])
+      else:
+        L[s+1] = L[s] + Dt*(55/24*Ldot[s] -59/24*Ldot[s-1] +37/24*Ldot[s-2] -9/24*Ldot[s-3])
+        Zout[s+1] = Zout[s] + Dt*(55/24*Zdot[s] -59/24*Zdot[s-1] +37/24*Zdot[s-2] -9/24*Zdot[s-3])
   return Zout, L
 
 def run_model_barbarossa(Z0, L0, Dt, nt):
@@ -233,7 +251,7 @@ def mean_error(Z1, Z2):
   return np.mean(Z1 - Z2)
 
 #Run the model
-Zout, L = run_model_ilbello(Z0, L0, Dt, nt)
+Zout, L = run_model_ilbello(Z0, L0, Dt, nt, method="leapfrog")
 
 maxZ = np.max(Zout)
 minZ = np.min(Zout)
@@ -270,8 +288,8 @@ for tt in range(Zout.shape[0]):
   plt.draw()
 
   # Save frames
-  salva_frame(fig, "Zout", folder, tt)
-  salva_frame(fig2, "tend", folder, tt)
+  #salva_frame(fig, "Zout", folder, tt)
+  #salva_frame(fig2, "tend", folder, tt)
 
 # Add final verification contours
 ax.contour(Z24, colors="red")
