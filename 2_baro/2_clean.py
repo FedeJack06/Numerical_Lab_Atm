@@ -304,12 +304,12 @@ maxD = np.max(anomaly)
 minD = np.min(anomaly)
 
 #plots
-fig, ax = plt.subplots()
+fig, ax = plt.subplots(figsize=(8, 6))
 levelsZ = np.linspace(minZ, maxZ, 15)
 contour = ax.contourf(Zout[0], levels=levelsZ)
 cb = fig.colorbar(contour, ax=ax)
 
-fig2, ax2 = plt.subplots()
+fig2, ax2 = plt.subplots(figsize=(8, 6))
 levelsD = np.linspace(minD, maxD, 15)
 tend = ax2.contourf(np.subtract(Zout[0], Zout[0]), levels=levelsD)
 cb2 = fig2.colorbar(tend, ax=ax2)
@@ -330,8 +330,8 @@ for tt in range(Zout.shape[0]):
   plt.draw()
 
   # Save frames
-  #salva_frame(fig, "Zout", folder, tt)
-  #salva_frame(fig2, "tend", folder, tt)
+  salva_frame(fig, "Zout", frame_folder, tt)
+  salva_frame(fig2, "tend", frame_folder, tt)
 
 # Add final verification contours
 ax.contour(Z24, colors="k")
@@ -353,5 +353,5 @@ print("Mean Error (Zout[-1] vs Z0):", mean_error_analysis)
 mean_error_24 = mean_error(Z24, Z0)
 print("Mean Error (Z24 vs Z0):", mean_error_24)
 
-plot_pointwise_error(Zout[-1], Z0, img_folder, "Zout_Z0", title="Pointwise Absolute Error (Z(t) vs Z0)")
-plot_pointwise_error(Z24, Z0, img_folder, "Z24_Z0", title="Pointwise Absolute Error (Z24 vs Z0)")
+plot_pointwise_error(Zout[-1], Z0, img_folder, "Zout_Z0", title="Pointwise Absolute Error\n$Z(t+24h)$ vs $Z_0$")
+plot_pointwise_error(Z24, Z0, img_folder, "Z24_Z0", title="Pointwise Absolute Error\n$Z_{24}$ vs $Z_0$")
