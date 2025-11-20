@@ -194,24 +194,6 @@ def run_model_ilbello(Z0, L0, Dt, nt, method="leapfrog"):
         Zout[s+1] = Zout[s] + Dt*(55/24*Zdot[s] -59/24*Zdot[s-1] +37/24*Zdot[s-2] -9/24*Zdot[s-3])
   return Zout, L
 
-def run_model_barbarossa(Z0, L0, Dt, nt):
-  Zout = np.zeros([nt+1,M,N])
-  L = np.zeros([nt+1,M,N])
-  Zout[0,:,:]  = Z0 #Copy initial height field
-  L[0] = L0
-
-  for s in range(Zout.shape[0]-1):
-    Ldot = make_Jacobian(Zout[s],np.multiply(h,L[s])+FCOR)
-    Zdot = Poisson_solver(Ldot, s)
-    if s == 0:
-      Zout[s+1] = Zdot*Dt + Zout[s]
-      L[s+1] = make_Laplacian(Zout[s+1], s)
-    else:
-      Zout[s+1] = Zdot*Dt*2 + Zout[s-1]
-      L[s+1] = make_Laplacian(Zout[s+1], s)
-
-  return Zout, L
-
 def run_model_ficcanaso(Z0, L0, Dt, nt): #NO integrazione + derivata Sparisce il continuo
   Zout = np.zeros([nt+1,M,N])
   L = np.zeros([nt+1,M,N])
