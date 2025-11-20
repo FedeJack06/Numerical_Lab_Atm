@@ -25,9 +25,12 @@ Dt = DtHours*60*60                #  Timestep in seconds
 nt = int(seclen//Dt )             #  Total number of time-steps.
 
 #Output directory
-folder = "output_frames"
-if not os.path.exists(folder):
-    os.makedirs(folder)
+frame_folder = "output_frames"
+img_folder = "output_images"
+if not os.path.exists(frame_folder):
+    os.makedirs(frame_folder)
+if not os.path.exists(img_folder):
+    os.makedirs(img_folder)
 
 #Define functions
 def make_Laplacian(Z, const):
@@ -332,7 +335,7 @@ for tt in range(Zout.shape[0]):
 
 # Add final verification contours
 ax.contour(Z24, colors="k")
-salva_frame(fig, name="Zout_48", folder=folder, tt="final")
+salva_frame(fig, name="Zout_48", folder=frame_folder, tt="final")
 
 print("done")
 
@@ -350,5 +353,5 @@ print("Mean Error (Zout[-1] vs Z0):", mean_error_analysis)
 mean_error_24 = mean_error(Z24, Z0)
 print("Mean Error (Z24 vs Z0):", mean_error_24)
 
-plot_pointwise_error(Zout[-1], Z0, folder, "Zout_Z0", title="Pointwise Absolute Error (Z(t) vs Z0)")
-plot_pointwise_error(Z24, Z0, folder, "Z24_Z0", title="Pointwise Absolute Error (Z24 vs Z0)")
+plot_pointwise_error(Zout[-1], Z0, img_folder, "Zout_Z0", title="Pointwise Absolute Error (Z(t) vs Z0)")
+plot_pointwise_error(Z24, Z0, img_folder, "Z24_Z0", title="Pointwise Absolute Error (Z24 vs Z0)")
