@@ -13,6 +13,17 @@ DAYLEN  = 1  # Forecast length in days
 DtHours = 1/2 # Timestep in hours
 DX = 736e3   # Spatial grid spacing in meters
 
+M  = 16 # Points in y direction
+N  = 19 # Points in x direction
+Xp = 8  # Coord. of North Pole
+Yp = 12 # Coord. of North Pole
+
+#COORDINATES AND TIME
+daylen = DAYLEN                   #  Integration time (in days)
+seclen = int(daylen*24*60*60)     #  Integration time (in seconds)
+Dt = DtHours*60*60                #  Timestep in seconds
+nt = int(seclen//Dt )             #  Total number of time-steps.
+
 #Output directory
 folder = "output_frames"
 if not os.path.exists(folder):
@@ -124,17 +135,6 @@ def make_f_and_h(N,M,Xp,Yp):
       h[nx,ny] = grav * mapPS**2 / f
     return FCOR,h
 
-#Fixed Parameter
-M  = 16 # Points in y direction
-N  = 19 # Points in x direction
-Xp = 8  # Coord. of North Pole
-Yp = 12 # Coord. of North Pole
-
-#COORDINATES AND TIME
-daylen = DAYLEN                   #  Integration time (in days)
-seclen = int(daylen*24*60*60)     #  Integration time (in seconds)
-Dt = DtHours*60*60                #  Timestep in seconds
-nt = int(seclen//Dt )             #  Total number of time-steps.
 # Define the (X,Y) grid (for plotting)
 X, Y  = np.meshgrid(np.linspace(1,M,M),np.linspace(1,N,N))
 X = np.transpose(X)
@@ -257,6 +257,38 @@ def rmse(Z1, Z2):
 def mean_error(Z1, Z2):
   return np.mean(Z1 - Z2)
 
+def plot_pointwise_error(Z1, Z2, folder, filename, title="Pointwise Absolute Error"):
+    M, N = Z1.shape
+    
+    error = np.abs(Z1 - Z2)
+
+    fig, ax = plt.subplots(figsize=(8, 6))
+    im = ax.imshow(error, origin='lower', interpolation='none', cmap='Reds', extent=[0, N, 0, M], vmin=0)
+    
+    ax.set_xticks(np.arange(0, N, 1))
+    ax.set_yticks(np.arange(0, M, 1))
+    ax.set_xticklabels(np.arange(0, N, 1))
+    ax.set_yticklabels(np.arange(0, M, 1))
+
+    ax.set_xticks(np.arange(0, N+1, 1), minor=True)
+    ax.set_yticks(np.arange(0, M+1, 1), minor=True)
+    ax.grid(which='minor', color='k', linestyle='-', linewidth=0.5)
+    ax.tick_params(which='minor', bottom=False, left=False)
+
+    ax.plot(Xp + 0.5, Yp + 0.5, marker='*', markersize=15, color='orange',
+            markeredgecolor='k', markeredgewidth=0.5)
+
+    ax.set_aspect('equal')
+    ax.set_xlabel('X')
+    ax.set_ylabel('Y')
+    ax.set_title(title)
+
+    cb = fig.colorbar(im, ax=ax)
+    cb.set_label('Absolute Error [m]')
+    
+    plt.savefig(f"{folder}/absolute_error_{filename}.png", bbox_inches='tight', dpi=300)
+    plt.close(fig)
+
 #Run the model
 Zout, L = run_model_ilbello(Z0, L0, Dt, nt, method="leapfrog")
 
@@ -317,3 +349,6 @@ print("Mean Error (Zout[-1] vs Z0):", mean_error_analysis)
 
 mean_error_24 = mean_error(Z24, Z0)
 print("Mean Error (Z24 vs Z0):", mean_error_24)
+
+plot_pointwise_error(Zout[-1], Z0, folder, "Zout_Z0", title="Pointwise Absolute Error (Z(t) vs Z0)")
+plot_pointwise_error(Z24, Z0, folder, "Z24_Z0", title="Pointwise Absolute Error (Z24 vs Z0)")
