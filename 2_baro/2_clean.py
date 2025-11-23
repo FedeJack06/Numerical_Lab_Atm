@@ -25,15 +25,12 @@ Dt = DtHours*60*60                #  Timestep in seconds
 nt = int(seclen//Dt )             #  Total number of time-steps.
 
 #Output directory
-frame_folder = "output_frames"
 img_folder = "output_images"
-if not os.path.exists(frame_folder):
-    os.makedirs(frame_folder)
 if not os.path.exists(img_folder):
     os.makedirs(img_folder)
 
 #Define functions
-def make_Laplacian(Z, const):
+def make_Laplacian(Z, timestep):
     #Compute the Laplacian of the geopotential height
     #within the boundary (boundary excluded)
     M       = Z.shape[0]
@@ -49,7 +46,7 @@ def make_Laplacian(Z, const):
     #Laplacian of height (or vorticity)
     L0in[1:M-1,1:N-1] = Zxx[1:M-1,1:N-1]+Zyy[1:M-1,1:N-1]
 
-    if not const:
+    if not timestep: #interpolate only for first timestep (=0)
       for i in range(1,M-1):
         L0in[i,0] = 2*L0in[i,1]-L0in[i,2]
         L0in[i,N-1] = 2*L0in[i,N-2]-L0in[i,N-3]
@@ -79,7 +76,7 @@ def make_Jacobian(Z,ABS_VOR):
     Jacobi = ABS_VORx * Zy - ABS_VORy * Zx
     return Jacobi
 
-def Poisson_solver(Jacobi, const):
+def Poisson_solver(Jacobi, timestep):
     M       = Jacobi.shape[0]
     N       = Jacobi.shape[1]
     SM=np.zeros([M-2,M-2])
@@ -108,7 +105,7 @@ def Poisson_solver(Jacobi, const):
     #  Compute inverse transform to get the height tendency.
     Zdot[1:M-1,1:N-1] = (4/((M-1)*(N-1))) *np.dot(SM,np.dot(ZDOT,SN))
 
-    if not const:
+    if not timestep: #interpolate only for first timestep (=0)
       for i in range(1,M-1):
         Zdot[i,0] = 2*Zdot[i,1]-Zdot[i,2]
         Zdot[i,N-1] = 2*Zdot[i,N-2]-Zdot[i,N-3]
@@ -155,7 +152,7 @@ Z24 = np.genfromtxt(File2)
 Z24 = np.transpose(Z24)
 
 #Initial Laplacian
-L0 = make_Laplacian(Z0, 0)
+L0 = make_Laplacian(Z0, timestep=0) #with boundary interpolation
 
 def run_model_ilbello(Z0, L0, Dt, nt, method="leapfrog"):
   Zout = np.zeros([nt+1,M,N])
@@ -164,7 +161,7 @@ def run_model_ilbello(Z0, L0, Dt, nt, method="leapfrog"):
   Ldot = np.zeros([nt+1,M,N])
 
   #Copy initial height field
-  Zout[0,:,:]  = Z0
+  Zout[0]  = Z0
   L[0] = L0
 
   for s in range(Zout.shape[0]-1):
@@ -192,27 +189,53 @@ def run_model_ilbello(Z0, L0, Dt, nt, method="leapfrog"):
       else:
         L[s+1] = L[s] + Dt*(55/24*Ldot[s] -59/24*Ldot[s-1] +37/24*Ldot[s-2] -9/24*Ldot[s-3])
         Zout[s+1] = Zout[s] + Dt*(55/24*Zdot[s] -59/24*Zdot[s-1] +37/24*Zdot[s-2] -9/24*Zdot[s-3])
-  return Zout, L
+    #costant boundary null
+    #L[s+1,:,0] = 0 #prima colonna
+    #L[s+1,0,:] = 0 #prima riga
+    #L[s+1,M-1,:] = 0 #ultima riga
+    #L[s+1,:,N-1] = 0 #ultima colonna
+  return Zout, L, "ilbello"
 
-def run_model_ficcanaso(Z0, L0, Dt, nt): #NO integrazione + derivata Sparisce il continuo
+def run_model_ilbarbarossa(Z0, L0, Dt, nt, method="leapfrog"):
   Zout = np.zeros([nt+1,M,N])
-  L = np.zeros([nt+1,M,N])
-  Zout[0,:,:]  = Z0 #Copy initial height field
+  Zdot = np.zeros([nt+1,M,N])
+  L    = np.zeros([nt+1,M,N])
+  Ldot = np.zeros([nt+1,M,N])
+
+  #Copy initial height field
+  Zout[0]  = Z0
   L[0] = L0
 
   for s in range(Zout.shape[0]-1):
-    if s == 0:
-      Ldot = make_Jacobian(Zout[s],np.multiply(h,L[s])+FCOR)
-      L[s+1] = Ldot*Dt + L[s]
-      Zout[s+1] = Poisson_solver(L[s+1], s)
-    else:
-      Ldot = make_Jacobian(Zout[s],np.multiply(h,L[s])+FCOR)
-      L[s+1] = Ldot*Dt*2 + L[s-1]
-      Zout[s+1] = Poisson_solver(L[s+1], s)
-  return Zout, L
+    Ldot[s] = make_Jacobian(Zout[s],np.multiply(h,L[s])+FCOR)
+    Zdot[s] = Poisson_solver(Ldot[s], s)
+
+    if method == "leapfrog":
+      if s == 0:
+        Zout[s+1] = Zdot[s]*Dt + Zout[s]
+      else:
+        Zout[s+1] = Zdot[s]*Dt*2 + Zout[s-1]
+
+    elif method == "AB4":
+      if s == 0:
+        Zout[s+1] = Zdot[s]*Dt + Zout[s]
+      elif s==1:
+        Zout[s+1] = Zout[s] + Dt*(3/2*Zdot[s] -0.5*Zdot[s-1])
+      elif s==2:
+        Zout[s+1] = Zout[s] + Dt*(23/12*Zdot[s] -4/3*Zdot[s-1] +5/12*Zdot[s-2])
+      else:
+        Zout[s+1] = Zout[s] + Dt*(55/24*Zdot[s] -59/24*Zdot[s-1] +37/24*Zdot[s-2] -9/24*Zdot[s-3])
+    L[s+1] = make_Laplacian(Zout[s+1], timestep=s)
+    #L boundary costant
+    L[s+1,:,0] = L[s,:,0] #prima colonna
+    L[s+1,0,:] = L[s,0,:] #prima riga
+    L[s+1,M-1,:] = L[s,M-1,:] #ultima riga
+    L[s+1,:,N-1] = L[s,:,N-1] #ultima colonna
+    #print(L[s+1,:,0])
+  return Zout, L, "ilbarbarossa"
 
 #plots functions
-def plot_geopotenziale(ax, Z, levels, cmap, cb=None):
+def plot_contour(ax, Z, levels, cmap, cb=None, title=""):
   img = ax.contourf(Z, levels=levels, cmap=cmap)
   if cb is not None:
     cb.update_normal(img)
@@ -220,17 +243,7 @@ def plot_geopotenziale(ax, Z, levels, cmap, cb=None):
   ax.plot(Xp, Yp, marker='*', markersize=15, color='orange')
   ax.set_xlabel('X')
   ax.set_ylabel('Y')
-  ax.set_title('Geopotential Height')
-  return img
-
-def plot_tendency(ax, Z_now, Z_ref, levels, cb=None):
-  img = ax.contourf(Z_now - Z_ref, levels=levels)
-  if cb is not None:
-    cb.update_normal(img)
-  ax.plot(Xp, Yp, marker='*', markersize=15, color='orange')
-  ax.set_xlabel('X')
-  ax.set_ylabel('Y')
-  ax.set_title('Tendency of Geopotential Height Anomaly')
+  ax.set_title(title)
   return img
 
 def salva_frame(fig, name, folder, tt):
@@ -243,97 +256,118 @@ def mean_error(Z1, Z2):
   return np.mean(Z1 - Z2)
 
 def plot_pointwise_error(Z1, Z2, folder, filename, title="Pointwise Absolute Error"):
-    M, N = Z1.shape
-    
-    error = np.abs(Z1 - Z2)
+  M, N = Z1.shape
+  
+  error = np.abs(Z1 - Z2)
 
-    fig, ax = plt.subplots(figsize=(8, 6))
-    im = ax.imshow(error, origin='lower', interpolation='none', cmap='Reds', extent=[0, N, 0, M], vmin=0)
-    
-    ax.set_xticks(np.arange(0, N, 1))
-    ax.set_yticks(np.arange(0, M, 1))
-    ax.set_xticklabels(np.arange(0, N, 1))
-    ax.set_yticklabels(np.arange(0, M, 1))
+  fig, ax = plt.subplots(figsize=(8, 6))
+  im = ax.imshow(error, origin='lower', interpolation='none', cmap='Reds', extent=[0, N, 0, M], vmin=0)
+  
+  ax.set_xticks(np.arange(0, N, 1))
+  ax.set_yticks(np.arange(0, M, 1))
+  ax.set_xticklabels(np.arange(0, N, 1))
+  ax.set_yticklabels(np.arange(0, M, 1))
 
-    ax.set_xticks(np.arange(0, N+1, 1), minor=True)
-    ax.set_yticks(np.arange(0, M+1, 1), minor=True)
-    ax.grid(which='minor', color='k', linestyle='-', linewidth=0.5)
-    ax.tick_params(which='minor', bottom=False, left=False)
+  ax.set_xticks(np.arange(0, N+1, 1), minor=True)
+  ax.set_yticks(np.arange(0, M+1, 1), minor=True)
+  ax.grid(which='minor', color='k', linestyle='-', linewidth=0.5)
+  ax.tick_params(which='minor', bottom=False, left=False)
 
-    ax.plot(Xp + 0.5, Yp + 0.5, marker='*', markersize=15, color='orange',
-            markeredgecolor='k', markeredgewidth=0.5)
+  ax.plot(Xp + 0.5, Yp + 0.5, marker='*', markersize=15, color='orange',
+          markeredgecolor='k', markeredgewidth=0.5)
 
-    ax.set_aspect('equal')
-    ax.set_xlabel('X')
-    ax.set_ylabel('Y')
-    ax.set_title(title)
+  ax.set_aspect('equal')
+  ax.set_xlabel('X')
+  ax.set_ylabel('Y')
+  ax.set_title(title)
 
-    cb = fig.colorbar(im, ax=ax)
-    cb.set_label('Absolute Error [m]')
-    
-    plt.savefig(f"{folder}/absolute_error_{filename}.png", bbox_inches='tight', dpi=300)
-    plt.close(fig)
+  cb = fig.colorbar(im, ax=ax)
+  cb.set_label('Absolute Error [m]')
+  
+  plt.savefig(f"{folder}/absolute_error_{filename}.png", bbox_inches='tight', dpi=300)
+  plt.close(fig)
 
+#######################################################################################################################
+#######################################################################################################################
 #Run the model
-Zout, L = run_model_ilbello(Z0, L0, Dt, nt, method="leapfrog")
+Zout, L, model_type = run_model_ilbarbarossa(Z0, L0, Dt, nt, method="leapfrog")
 
+#plots Zout[-1]
 maxZ = np.max(Zout)
 minZ = np.min(Zout)
-
-#Anomaly
-anomaly = np.subtract(Zout[:], Zout[0])
-maxD = np.max(anomaly)
-minD = np.min(anomaly)
-
-#plots
 fig, ax = plt.subplots(figsize=(8, 6))
 levelsZ = np.linspace(minZ, maxZ, 15)
-contour = ax.contourf(Zout[0], levels=levelsZ)
-cb = fig.colorbar(contour, ax=ax)
-
-fig2, ax2 = plt.subplots(figsize=(8, 6))
-levelsD = np.linspace(minD, maxD, 15)
-tend = ax2.contourf(np.subtract(Zout[0], Zout[0]), levels=levelsD)
-cb2 = fig2.colorbar(tend, ax=ax2)
-
-contour = plot_geopotenziale(ax, Zout[0], levelsZ, cmap='viridis', cb=cb)
-tend = plot_tendency(ax2, Zout[0], Zout[0], levelsD, cb=cb2)
-
-# Loop di aggiornamento
-for tt in range(Zout.shape[0]):
-  contour.remove()
-  tend.remove()
-
-  # Update plots using helper functions
-  contour = plot_geopotenziale(ax, Zout[tt], levelsZ, cmap='viridis', cb=cb)
-  tend = plot_tendency(ax2, Zout[tt], Zout[0], levelsD, cb=cb2)
-  
-  # Update plots
-  plt.draw()
-
-  # Save frames
-  salva_frame(fig, "Zout", frame_folder, tt)
-  salva_frame(fig2, "tend", frame_folder, tt)
+contourZ = ax.contourf(Zout[0], levels=levelsZ)
+cb = fig.colorbar(contourZ, ax=ax)
+plot_contour(ax, Zout[-1], levelsZ, cmap='viridis', cb=cb, title="Geopotential Height (500hPa) at $t=t_0+24h$")
+salva_frame(fig, "Zout_"+model_type, img_folder, tt="")
+#zout[0]
+fig6, ax6 = plt.subplots(figsize=(8, 6))
+contourZ0 = ax6.contourf(Zout[0], levels=levelsZ)
+cb6 = fig6.colorbar(contourZ0, ax=ax6)
+plot_contour(ax6, Zout[0], levelsZ, cmap='viridis', cb=cb6, title="Geopotential Height (500hPa) at $t=t_0$")
+salva_frame(fig6, "Z0_"+model_type, img_folder, tt="")
 
 # Add final verification contours
-ax.contour(Z24, colors="k")
-salva_frame(fig, name="Zout_48", folder=frame_folder, tt="final")
+z24_contour = ax.contour(Z24, colors="k", levels=levelsZ)
+ax.clabel(z24_contour, fontsize=10)
+salva_frame(fig, name="Zout_"+model_type, folder=img_folder, tt="Z24")
 
-print("done")
+#Tendency Z[fin] - Z0
+tendModel = np.subtract(Zout[:], Z0) #at any time
+fig2, ax2 = plt.subplots(figsize=(8, 6))
+levelsTmodel = np.linspace(-np.max(np.abs(tendModel)), np.max(np.abs(tendModel)), 15)
+contourTmodel = ax2.contourf(tendModel[0], levels=levelsTmodel)
+cb2 = fig2.colorbar(contourTmodel, ax=ax2)
+plot_contour(ax2, tendModel[-1], levelsTmodel, cmap='seismic', cb=cb2, title="Model tendency $Z(t_0+24h) - Z_0$")
+salva_frame(fig2, "tend_model_"+model_type, img_folder, tt="final")
+
+#expected tendency Z24 - Z0
+z24_z0 = np.subtract(Z24, Z0)
+fig3, ax3 = plt.subplots(figsize=(8, 6))
+levelsDiff = np.linspace(-np.max(np.abs(z24_z0)), np.max(np.abs(z24_z0)), 15)
+contourDiff = ax3.contourf(z24_z0, levels=levelsDiff)
+cb3 = fig3.colorbar(contourDiff, ax=ax3)
+plot_contour(ax3, z24_z0, levelsDiff, cmap='seismic', cb=cb3, title='Expected tendency $Z_{24}-Z_0$')
+salva_frame(fig3, "expected_tend_Z24-Z0", img_folder, tt="")
+
+#Zout[-1] - Z24, spatial error of the model
+zout_z24 = np.subtract(Zout[-1],Z24)
+fig4, ax4 = plt.subplots(figsize=(8, 6))
+levelsDiff = np.linspace(-np.max(np.abs(zout_z24)), np.max(np.abs(zout_z24)), 15)
+contourDiff = ax4.contourf(zout_z24, levels=levelsDiff)
+cb4 = fig4.colorbar(contourDiff, ax=ax4)
+contourDiff = plot_contour(ax4, zout_z24, levelsDiff, cmap='seismic', cb=cb4, title='$Z(t+24h) - Z_{24}$')
+salva_frame(fig4, "spatial_error_Zout-Z24", img_folder, tt="")
+
+print("done "+model_type)
 
 #RMSE
-rmse_analysis = rmse(Zout[-1], Z0)
-print("RMSE (Zout[-1] vs Z0):", rmse_analysis)
+rmse_model = np.zeros([nt+1])
+for i in range(nt+1):
+  rmse_model[i] = rmse(Zout[i], Z24)
+print("RMSE model (Zout[-1] vs Z24):", rmse_model[-1])
 
-rmse_24 = rmse(Z24, Z0)
-print("RMSE (Z24 vs Z0):", rmse_24)
+rmse_pers = rmse(Z0, Z24)
+print("RMSE persistency (Z0 vs Z24):", rmse_pers)
 
 #Mean Error
-mean_error_analysis = mean_error(Zout[-1], Z0)
-print("Mean Error (Zout[-1] vs Z0):", mean_error_analysis) 
+mean_error_model = mean_error(Zout[-1], Z24)
+print("ME model (Zout[-1] vs Z24):", mean_error_model) 
 
-mean_error_24 = mean_error(Z24, Z0)
-print("Mean Error (Z24 vs Z0):", mean_error_24)
+mean_error_pers = mean_error(Z0, Z24)
+print("ME persistency (Z0 vs Z24):", mean_error_pers) 
 
-plot_pointwise_error(Zout[-1], Z0, img_folder, "Zout_Z0", title="Pointwise Absolute Error\n$Z(t+24h)$ vs $Z_0$")
-plot_pointwise_error(Z24, Z0, img_folder, "Z24_Z0", title="Pointwise Absolute Error\n$Z_{24}$ vs $Z_0$")
+#plot_pointwise_error(Zout[-1], Z24, img_folder, "Zf_Z24_"+model_type, title="Pointwise Error\n$Z(t+24h)$ vs $Z_{24}$")
+#plot_pointwise_error(Z0, Z24, img_folder, "Z0_Z24_"+model_type, title="Pointwise Error\n$Z_0$ vs $Z_{24}$")
+#plot_pointwise_error(Zout[-1], Z0, img_folder, "Zf_Z0_"+model_type, title="Pointwise Error\n$Z(t+24h)$ vs $Z_{0}$")
+
+fig5, ax5 = plt.subplots(figsize=(8, 5))
+timestep = np.linspace(0, 0.5*nt, nt+1)
+ax5.plot(timestep, rmse_model, linewidth=3)
+ax5.set_title("Evolution of model RMSE")
+ax5.set_xlabel("t [Hr]")
+ax5.set_ylabel("RMSE $Z(t) - Z_{24}$")
+fig5.savefig(img_folder+"/rmse_time_"+model_type+".png", dpi=300, bbox_inches='tight')
+
+plt.show()
