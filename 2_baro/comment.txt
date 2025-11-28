@@ -1,0 +1,5 @@
+for the graph RMSE vs time:
+	AB4 removes scalini
+	ilbello scalini costanti
+	dimensione scalini  = dt
+	altri metodi con L cost o nullo ai bordi influiscono
