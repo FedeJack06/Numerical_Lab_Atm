@@ -8,27 +8,29 @@ plt.rcParams['figure.dpi'] = 200
 plt.rcParams['font.size'] = 12
 
 # Variabile da analizzare e Nomi File
-var_name = 'temp0'
-file_nino = 'DJFmean_nino.nc'
-file_clim = 'DJFmean_clim.nc'
+var_name = 'q'
+season = 'JJA'
+file_nino = season+'mean_nino.nc'
+file_clim = season+'mean_clim.nc'
 outDir = "out_img/fix_point_corr/"
 
 ds_nino = xr.open_dataset(file_nino)
 ds_clim = xr.open_dataset(file_clim)
 
 # concatenazione Climatologia + Nino
-da = xr.concat([ds_clim[var_name], ds_nino[var_name]], dim='time')
+da = xr.concat([ds_clim[var_name], ds_nino[var_name]], dim='time').isel(lev=0)
+#da = xr.concat([ds_clim[var_name], ds_nino[var_name]], dim='time')
 
 # media su tutto
 mean_total = da.mean(dim='time')
 
-# Anomalia rispetto alla media totale
+# 400 Anomalie rispetto alla media totale
 anom_full = da - mean_total
 
-################################################
+#############################################
 # PUNTO DI RIFERIMENTO
-lat_target = 0.0
-lon_target = -120.0
+lat_target = 0
+lon_target = 240
 
 print(f"Punto scelto: Lat {lat_target}, Lon {lon_target}")
 
@@ -36,9 +38,11 @@ print(f"Punto scelto: Lat {lat_target}, Lon {lon_target}")
 ref_series = anom_full.sel(lat=lat_target, lon=lon_target, method='nearest')
 
 #############################################
-# One-Point Correlation
+# cluster riferimento
+#ref_series = anom_full.sel()
 
-print("Calcolo correlazione...")
+#############################################
+# One-Point Correlation
 # Confronta il "salto" nel punto rif con il "salto" in ogni altro punto
 corr_map = xr.corr(anom_full, ref_series, dim='time')
 
@@ -46,8 +50,8 @@ corr_map = xr.corr(anom_full, ref_series, dim='time')
 # PLOTTING
 fig = plt.figure(figsize=(12, 7), constrained_layout=True)
 
-ax2 = fig.add_subplot(1, 1, 1, projection=ccrs.Robinson())
-ax2.set_title(f"Teleconnessioni (Correlazione Clim+Nino) - Rif: {lat_target}N, {lon_target}E", 
+ax2 = fig.add_subplot(1, 1, 1, projection=ccrs.Robinson(central_longitude=150))
+ax2.set_title(f"{season} {var_name} - Correlazione Clim+Nino) - Rif: {lat_target}N, {lon_target}E", 
               fontsize=14, weight='bold')
 ax2.coastlines()
 
@@ -64,12 +68,14 @@ ax2.legend(loc='lower left')
 plt.colorbar(p2, ax=ax2, label='Coefficiente di Correlazione', shrink=0.8)
 
 # Nome file dinamico
-nome_file_out = f"{outDir}corr_combined_{lat_target}N_{lon_target}E.png"
+nome_file_out = f"{outDir}corr_{var_name}_{file_clim[0:3]}_{lat_target}N_{lon_target}E.png"
 plt.savefig(nome_file_out, dpi=150, bbox_inches='tight')
 print(f"Salvato: {nome_file_out}")
 
+#plt.show()
+
 # CONTROLLO VARIANZA
-std_dev = anom_full.std(dim='time')
+'''std_dev = anom_full.std(dim='time')
 
 plt.figure(figsize=(10, 5))
 ax = plt.axes(projection=ccrs.PlateCarree())
@@ -81,4 +87,4 @@ plt.show()
 
 # CONTROLLO NUMERICO
 std_point = std_dev.sel(lat=lat_target, lon=lon_target, method='nearest').item()
-print(f"Deviazione standard nel punto scelto (deve essere > 0): {std_point:.4f}")
+print(f"Deviazione standard nel punto scelto (deve essere > 0): {std_point:.4f}")'''
