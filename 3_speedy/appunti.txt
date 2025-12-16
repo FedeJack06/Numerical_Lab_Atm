@@ -1,0 +1,65 @@
+deviazione standard alta => Modello accoppiato atm oceano e fissato solo temp inziale oceano oppure fisso sempre oceano e atm libera
+SST Fissa = Forzante Costante => serve Signal to Nois ratio con climatologia, altrimenti 1.5K di dev std è rumore casuale
+
+
+
+La formula utilizzata nello script, tramite la funzione `xr.corr()`, è il **Coefficiente di Correlazione di Pearson** (spesso indicato con la lettera $\rho$ o $r$).
+
+È la misura statistica più standard per quantificare la relazione lineare tra due serie di dati.
+
+Ecco la formula matematica esatta che Python sta calcolando per **ogni singolo punto** della tua mappa:
+
+$$r = \frac{\sum_{t=1}^{N} (x_t - \bar{x})(y_t - \bar{y})}{\sqrt{\sum_{t=1}^{N} (x_t - \bar{x})^2} \cdot \sqrt{\sum_{t=1}^{N} (y_t - \bar{y})^2}}$$
+
+### Spiegazione delle variabili nel tuo caso specifico (400 anni)
+
+* **$N$**: È il numero totale di anni (400).
+* **$t$**: È l'indice dell'anno (da 0 a 399).
+* **$x_t$ (Riferimento)**: È la temperatura nel tuo "Punto Pacifico" al tempo $t$.
+    serie è un gradino. Bassa per i primi 200, alta per i secondi 200.
+* **$\bar{x}$**: È la media temporale del punto Pacifico sui 400 anni.
+* **$y_t$ (Target)**: È la temperatura in un punto qualsiasi della mappa (es. Roma) al tempo $t$.
+* **$\bar{y}$**: È la media temporale di Roma sui 400 anni.
+
+---
+
+### Come funziona fisicamente questa formula col "Gradino"?
+
+La formula è una frazione. Analizziamo cosa succede sopra e sotto la linea di frazione quando usi il trucco della concatenazione (Controllo + Niño).
+
+
+
+#### 1. Il Numeratore (La Covarianza)
+$$\sum (x_t - \bar{x})(y_t - \bar{y})$$
+Questo pezzo decide il **segno** (Rosso o Blu) e la forza del legame.
+Python moltiplica, anno per anno, quanto il Pacifico è lontano dalla sua media per quanto Roma è lontana dalla sua media.
+
+* **Nei primi 200 anni (Controllo):**
+    * Il Pacifico è freddo ($x_t < \bar{x}$) $\rightarrow$ Valore **Negativo**.
+    * Se anche Roma è fredda ($y_t < \bar{y}$) $\rightarrow$ Valore **Negativo**.
+    * **Negativo $\times$ Negativo = POSITIVO (+)**.
+* **Nei secondi 200 anni (Niño):**
+    * Il Pacifico è caldo ($x_t > \bar{x}$) $\rightarrow$ Valore **Positivo**.
+    * Se Roma diventa calda ($y_t > \bar{y}$) $\rightarrow$ Valore **Positivo**.
+    * **Positivo $\times$ Positivo = POSITIVO (+)**.
+
+Se succede questo, la somma è un numero enorme positivo $\rightarrow$ **Correlazione Alta (Rosso)**.
+
+Se invece Roma si raffreddasse col Niño, avresti segni opposti e la somma sarebbe negativa $\rightarrow$ **Correlazione Bassa (Blu)**.
+
+#### 2. Il Denominatore (Le Deviazioni Standard)
+$$\sqrt{\sum (x_t - \bar{x})^2} \cdot \sqrt{\sum (y_t - \bar{y})^2}$$
+Questo serve solo a **normalizzare** il risultato.
+Prende la "potenza" del salto del Pacifico e la "potenza" del salto di Roma e divide il numeratore per questi valori.
+Questo assicura che il risultato finale ($r$) sia sempre compreso tra:
+* **+1**: Correlazione perfetta positiva (copia esatta).
+* **0**: Nessuna relazione (caos).
+* **-1**: Correlazione perfetta negativa (specchio).
+
+### In sintesi
+
+Nello script concatenato, la formula di Pearson sta matematicamente chiedendo:
+
+> *"Quanto la forma del grafico della temperatura di questo punto assomiglia alla forma a gradino del punto di riferimento?"*
+
+Più il punto assomiglia a un gradino netto (basso prima, alto dopo), più il valore si avvicina a 1.
