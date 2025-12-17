@@ -13,6 +13,7 @@ Additional requirements for this example:
 """
 import cartopy.crs as ccrs
 import matplotlib.pyplot as plt
+import matplotlib.ticker as ticker
 import numpy as np
 import xarray as xr
 
@@ -24,6 +25,7 @@ from eofs.examples import example_data_path
 # European/Atlantic domain (80W-40E, 20-90N).
 #filename = example_data_path('hgt_djf.nc')
 filename = 'DJFmean_clim.nc'
+title = filename[:3]+" - "+filename[8:12]
 level = 2 # 500 hPa
 modo = 0
 timestep = 0
@@ -84,7 +86,58 @@ for i in range( len(z_djf.coords['time'].values) ):
     index_spatial =  eof1.isel(mode=modo, lev=level) * anomaly
     nao_i.append(index_spatial.sum())
 
-plt.figure(3)
-plt.plot(nao_i)
-plt.title("CLIMA DJF")
+'''fig, ax = plt.subplots(3,1,figsize=(18,12))
+ax[0].plot(x, nao_i, color='black', alpha=0)
+ax[0].fill_between(x, nao_i, 0, 
+                 where=(np.array(nao_i) >= 0),    # Condizione: y maggiore o uguale a 0
+                 color='red', 
+                 alpha=1,         # Trasparenza
+                 interpolate=True)  # Fondamentale per incroci puliti
+
+# 4. Riempimento BLU per i valori sotto lo zero
+ax[0].fill_between(x, nao_i, 0, 
+                 where=(np.array(nao_i) <= 0),    # Condizione: y minore o uguale a 0
+                 color='blue', 
+                 alpha=1, 
+                 interpolate=True)
+ax[0].axhline(0, color='black', linewidth=1)
+ax[0].grid()
+ax[0].set_title("NINO JJA")
+ax[0].set_xlabel("Time step")
+ax[0].set_ylabel("NAO index")'''
+
+x = list(range(len(nao_i)))
+num_plots = 4
+chunk_size = 50
+fig, axs = plt.subplots(num_plots, 1, figsize=(18, 12), sharey=True)
+
+for i, ax in enumerate(axs):
+    start = i * chunk_size
+    end = (i+1) * chunk_size
+    
+    x_slice = x[start:end]
+    y_slice = nao_i[start:end]
+
+    ax.plot(x_slice, y_slice, color='black', alpha=0)
+    ax.fill_between(x_slice, y_slice, 0, 
+                 where=(np.array(y_slice) >= 0),
+                 color='red', 
+                 alpha=1,
+                 interpolate=True)
+    ax.fill_between(x_slice, y_slice, 0, 
+                    where=(np.array(y_slice) <= 0),
+                    color='blue', 
+                    alpha=1, 
+                    interpolate=True)
+    ax.axhline(0, color='black', linewidth=1)
+
+    ax.xaxis.set_major_locator(ticker.MultipleLocator(5))
+    ax.minorticks_on()
+    ax.grid(which='major', linestyle='-', linewidth='0.5', color='black', alpha=0.5)
+    ax.grid(which='minor', linestyle=':', linewidth='0.5', color='black', alpha=0.3)
+
+    ax.set_xlabel("Time step")
+    ax.set_ylabel("NAO index")
+axs[0].set_title(title)
+#plt.savefig("out_img/nao/")
 plt.show()
