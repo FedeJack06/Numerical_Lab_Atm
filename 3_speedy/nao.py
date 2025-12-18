@@ -24,8 +24,13 @@ from eofs.examples import example_data_path
 # December-February averages of geopotential height at 500 hPa for the
 # European/Atlantic domain (80W-40E, 20-90N).
 #filename = example_data_path('hgt_djf.nc')
+<<<<<<< HEAD
 filename = 'DJFmean_clim.nc'
 title = "NAO Index - DJF climatology"#filename[:3]+" - "+filename[8:12]
+=======
+filename = 'DJFmean_nino.nc'
+title = filename[:3]+" - "+filename[8:12]
+>>>>>>> 7cc0d0a1660db97337e1333b68086e6c3430496e
 level = 2 # 500 hPa
 modo = 0
 timestep = 0
@@ -112,6 +117,7 @@ positive_freqs = freqs[:L//2]
 amplitudes = 2.0/L * np.abs(fft_values[:L//2]) # Normalizzazione ampiezza
 print(f"pos_freq {positive_freqs}")
 print(f"ampl {amplitudes}")
+<<<<<<< HEAD
 plt.figure(2, figsize=(18,6))
 plt.semilogx((1/positive_freqs)/(86400*365), amplitudes)
 axx = plt.gca()
@@ -119,6 +125,11 @@ axx.set_xlabel("Period [Y]")
 axx.set_ylabel("Amplitude")
 plt.tight_layout()
 plt.savefig(f"out_img/nao/freq_{filename[:3]}_{filename[8:12]}", dpi=200, bbox_inches='tight')
+=======
+plt.figure(2)
+plt.semilogx((1/positive_freqs)/(86400*365), amplitudes)
+plt.savefig(f"out_img/nao/frque{filename[8:12]}")
+>>>>>>> 7cc0d0a1660db97337e1333b68086e6c3430496e
 
 '''fig, ax = plt.subplots(3,1,figsize=(18,12))
 ax[0].plot(x, nao_i, color='black', alpha=0)
@@ -140,7 +151,7 @@ ax[0].set_title("NINO JJA")
 ax[0].set_xlabel("Time step")
 ax[0].set_ylabel("NAO index")'''
 
-x = list(range(len(nao_i)))
+'''x = list(range(len(nao_i)))
 num_plots = 4
 chunk_size = 50
 fig, axs = plt.subplots(num_plots, 1, figsize=(18, 12), sharey=True)
@@ -172,7 +183,12 @@ for i, ax in enumerate(axs):
 
     ax.set_xlabel("Time step")
     ax.set_ylabel("NAO index")
+<<<<<<< HEAD
 axs[0].set_title(title)
 plt.savefig(f"out_img/nao/index_nao_{filename[:3]}_{filename[8:12]}", dpi=200)
 plt.tight_layout()
+=======
+axs[0].set_title(title)'''
+#plt.savefig("out_img/nao/")
+>>>>>>> 7cc0d0a1660db97337e1333b68086e6c3430496e
 plt.show()
