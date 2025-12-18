@@ -24,12 +24,13 @@ from eofs.examples import example_data_path
 # December-February averages of geopotential height at 500 hPa for the
 # European/Atlantic domain (80W-40E, 20-90N).
 #filename = example_data_path('hgt_djf.nc')
-filename = 'DJFmean_clim.nc'
+filename = 'DJFmean_nino.nc'
 title = filename[:3]+" - "+filename[8:12]
 level = 2 # 500 hPa
 modo = 0
 timestep = 0
 z_djf = xr.open_dataset(filename)['gh']
+z_djf = z_djf.sel(lat=slice(20, 90))
 
 # Compute anomalies by removing the time-mean.
 z_djf = z_djf - z_djf.mean(dim='time')
@@ -80,11 +81,40 @@ plt.colorbar(ind, ax=ax2, label='index', shrink=0.8)
 ax2.set_title(f'Indice NAO DJF timestep {timestep}', fontsize=16)'''
 
 ####################################################
+print(eof1.sizes)
+print( eof1.coords['lat'].values )
 nao_i = []
 for i in range( len(z_djf.coords['time'].values) ):
     anomaly = z_djf.isel(time=i, lev=level)
     index_spatial =  eof1.isel(mode=modo, lev=level) * anomaly
     nao_i.append(index_spatial.sum())
+
+dev_nao = np.std(nao_i)
+nao_i = nao_i/dev_nao
+mean_nao = np.mean(nao_i)
+dev_nao = np.std(nao_i)
+print(f"mean {mean_nao}")
+print(f"dev {dev_nao}")
+
+# Parametri del segnale
+#fs = 3.170979198e6              # Frequenza di campionamento (Hz)
+T = 3.1536e7          # Intervallo di tempo tra i campioni
+L = len(nao_i)               # Lunghezza del segnale (numero di campioni)
+print(f"n campioni {L}")
+t = np.linspace(0, L*T, L, endpoint=False) # Vettore tempo
+# Calcolo della FFT
+fft_values = np.fft.fft(nao_i)
+# Calcolo delle frequenze associate
+# np.fft.fftfreq genera l'asse delle frequenze corretto
+freqs = np.fft.fftfreq(L, T)
+# Prendiamo solo la parte positiva dello spettro (primi L//2 elementi)
+positive_freqs = freqs[:L//2]
+amplitudes = 2.0/L * np.abs(fft_values[:L//2]) # Normalizzazione ampiezza
+print(f"pos_freq {positive_freqs}")
+print(f"ampl {amplitudes}")
+plt.figure(2)
+plt.semilogx((1/positive_freqs)/(86400*365), amplitudes)
+plt.savefig(f"out_img/nao/frque{filename[8:12]}")
 
 '''fig, ax = plt.subplots(3,1,figsize=(18,12))
 ax[0].plot(x, nao_i, color='black', alpha=0)
@@ -106,7 +136,7 @@ ax[0].set_title("NINO JJA")
 ax[0].set_xlabel("Time step")
 ax[0].set_ylabel("NAO index")'''
 
-x = list(range(len(nao_i)))
+'''x = list(range(len(nao_i)))
 num_plots = 4
 chunk_size = 50
 fig, axs = plt.subplots(num_plots, 1, figsize=(18, 12), sharey=True)
@@ -138,6 +168,6 @@ for i, ax in enumerate(axs):
 
     ax.set_xlabel("Time step")
     ax.set_ylabel("NAO index")
-axs[0].set_title(title)
+axs[0].set_title(title)'''
 #plt.savefig("out_img/nao/")
 plt.show()
