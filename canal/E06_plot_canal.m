@@ -2,7 +2,7 @@
 % assumes you instaled m_map
 % P. Oddo
 % --------------------------------------------------
- model_path='.';
+ model_path='./data';
  model_re_t='CANAL_grid_T.nc';
 
 % Load coordinates

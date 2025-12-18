@@ -1,0 +1,9 @@
+scp -o ProxyJump=federico.giacobbe@137.204.165.34 federico.giacobbe@137.204.165.41:oceano/nemo_4.2.0/tests/MY_CANAL/EXP00/tmp_work/CANAL_grid* .
+
+CONDIZIONE INIZIALE vortice, 
+	nn_fcase = 0 -> vortice fermo
+		1 m/s velocità tangenziale
+		1 m/s U zonale
+
+		1 m/s vel tang
+		3 m/s U zonale
