@@ -10,13 +10,8 @@ from eofs.examples import example_data_path
 # Dizionario dei file da processare
 # Assicurati che i nomi dei file siano corretti nella tua cartella
 files = {
-<<<<<<< HEAD
-    'Clim': 'JJAmean_clim.nc',
-    'Nino': 'JJAmean_nino.nc'
-=======
     'Clim': 'DJFmean_clim.nc',
     'Nino': 'DJFmean_nino.nc'
->>>>>>> 7cc0d0a1660db97337e1333b68086e6c3430496e
 }
 
 # Dizionario per salvare gli indici calcolati
@@ -120,9 +115,5 @@ ax.grid(True, linestyle='--', alpha=0.5)
 ax.set_xlim(0.5, 2.0)
 
 # Salvataggio e visualizzazione
-<<<<<<< HEAD
 plt.savefig(f"out_img/nao/bar_{filename[:3]}", dpi=200, bbox_inches='tight')
-=======
-plt.savefig("out_img/nao/boxplot_comparison.png")
->>>>>>> 7cc0d0a1660db97337e1333b68086e6c3430496e
 plt.show()
